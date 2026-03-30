@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS cars (
 const config = {
   clientID: "1488241628576485466",
   clientSecret: "Qvk0hAwEn9LfZWSdqwF9CSVGlh0zgB-L",
-  callbackURL: "http://localhost:3000/auth/discord/callback"
+  callbackURL: "https://concessionario.onrender.com/auth/discord/callback"
 };
 
 passport.use(new DiscordStrategy({
