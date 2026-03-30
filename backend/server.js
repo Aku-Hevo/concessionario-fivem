@@ -97,3 +97,8 @@ app.delete("/api/cars/:id", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server online"));
+
+cookie: {
+  secure: true,
+  sameSite: "none"
+}
