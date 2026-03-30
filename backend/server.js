@@ -7,6 +7,7 @@ const cors = require("cors");
 
 const app = express();
 
+
 app.use(cors({
   origin: true,
   credentials: true
@@ -17,7 +18,11 @@ app.use(express.json());
 app.use(session({
   secret: "supersecret",
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production", // sicuro solo in HTTPS
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
+  }
 }));
 
 app.use(passport.initialize());
@@ -98,7 +103,3 @@ app.delete("/api/cars/:id", (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server online"));
 
-cookie: {
-  secure: true,
-  sameSite: "none"
-}
