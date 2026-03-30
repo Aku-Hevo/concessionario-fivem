@@ -12,11 +12,11 @@ export default function App() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:3000/api/user", { credentials: "include" })
+    fetch("https://concessionario.onrender.com/api/user", { credentials: "include" })
       .then(res => res.json())
       .then(setUser);
 
-    fetch("http://localhost:3000/api/cars")
+    fetch("https://concessionario.onrender.com/api/cars")
       .then(res => res.json())
       .then(setCars);
   }, []);
@@ -24,7 +24,7 @@ export default function App() {
   if (!user) {
     return (
       <div style={{color:"white", background:"#111", height:"100vh", display:"flex", justifyContent:"center", alignItems:"center"}}>
-        <a href="http://localhost:3000/auth/discord">
+        <a href="https://concessionario.onrender.com/auth/discord">
           Login con Discord
         </a>
       </div>
@@ -32,7 +32,7 @@ export default function App() {
   }
 
   const addCar = async () => {
-    await fetch("http://localhost:3000/api/cars", {
+    await fetch("https://concessionario.onrender.com/api/cars", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
