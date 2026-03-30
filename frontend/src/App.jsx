@@ -24,7 +24,7 @@ export default function App() {
   if (!user) {
     return (
       <div style={{color:"white", background:"#111", height:"100vh", display:"flex", justifyContent:"center", alignItems:"center"}}>
-        <a href="https://concessionario.onrender.com/auth/discord">
+        <a href="https://concessionario.onrender.com/auth/discord/callback">
           Login con Discord
         </a>
       </div>
