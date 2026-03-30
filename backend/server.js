@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
@@ -6,7 +7,7 @@ const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 
 const app = express();
-app.set("trust proxy", 1); // importante dietro Render
+app.set("trust proxy", 1); // importante dietro proxy Render
 
 // CORS per frontend
 app.use(cors({
@@ -22,15 +23,15 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true,             // HTTPS obbligatorio su Render
-    sameSite: "none"           // cross-site login
+    secure: true, // HTTPS obbligatorio su Render
+    sameSite: "none"
   }
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-// DATABASE
+// DATABASE SQLite
 const db = new sqlite3.Database("./database.db");
 db.run(`
 CREATE TABLE IF NOT EXISTS cars (
@@ -44,10 +45,10 @@ CREATE TABLE IF NOT EXISTS cars (
 )
 `);
 
-// Discord OAuth2
+// --- DISCORD OAUTH2 (hardcoded) ---
 const config = {
-  clientID: process.env.CLIENT_ID,
-  clientSecret: process.env.CLIENT_SECRET,
+  clientID: "1488241628576485466", // il tuo Client ID Discord
+  clientSecret: "Qvk0hAwEn9LfZWSdqwF9CSVGlh0zgB-L", // il tuo Client Secret
   callbackURL: "https://concessionario-fivem.onrender.com/auth/discord/callback"
 };
 
@@ -65,9 +66,7 @@ passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 // HOME
-app.get("/", (req, res) => {
-  res.send("Backend attivo ✅");
-});
+app.get("/", (req, res) => res.send("Backend attivo ✅"));
 
 // LOGIN Discord
 app.get("/auth/discord", passport.authenticate("discord"));
@@ -117,6 +116,5 @@ app.delete("/api/cars/:id", (req, res) => {
   });
 });
 
-// PORT
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server online su port ${PORT}`));
