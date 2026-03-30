@@ -56,6 +56,7 @@ passport.use(new DiscordStrategy({
   callbackURL: config.callbackURL,
   scope: ["identify"]
 }, (accessToken, refreshToken, profile, done) => {
+  console.log("Discord profile:", profile); // DEBUG
   return done(null, profile);
 }));
 
