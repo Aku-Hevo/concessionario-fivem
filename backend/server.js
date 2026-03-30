@@ -62,6 +62,10 @@ passport.use(new DiscordStrategy({
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
+app.get("/", (req, res) => {
+  res.send("Backend attivo ✅");
+});
+
 // LOGIN
 app.get("/auth/discord", passport.authenticate("discord"));
 
