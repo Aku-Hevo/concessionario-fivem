@@ -17,13 +17,13 @@ app.use(cors({
 
 app.use(express.json());
 
-// SESSIONE
+// SESSIONE sicura
 app.use(session({
   secret: "supersecret",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // HTTPS obbligatorio su Render
+    secure: true, // HTTPS obbligatorio
     sameSite: "none"
   }
 }));
@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS cars (
 )
 `);
 
-// --- DISCORD OAUTH2 (hardcoded) ---
+// --- DISCORD OAUTH2 hardcoded ---
 const config = {
-  clientID: "1488241628576485466", // il tuo Client ID Discord
+  clientID: "1488241628576485466", // il tuo Client ID
   clientSecret: "Qvk0hAwEn9LfZWSdqwF9CSVGlh0zgB-L", // il tuo Client Secret
   callbackURL: "https://concessionario-fivem.onrender.com/auth/discord/callback"
 };
@@ -65,25 +65,38 @@ passport.use(new DiscordStrategy({
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// HOME
+// --- ROUTE ---
 app.get("/", (req, res) => res.send("Backend attivo ✅"));
 
 // LOGIN Discord
 app.get("/auth/discord", passport.authenticate("discord"));
 
-app.get("/auth/discord/callback",
-  passport.authenticate("discord", { failureRedirect: "/" }),
-  (req, res) => {
-    res.redirect("https://concessionario-fivem.vercel.app/dashboard");
-  }
-);
+// CALLBACK con gestione errori dettagliata
+app.get("/auth/discord/callback", (req, res, next) => {
+  passport.authenticate("discord", (err, user, info) => {
+    if (err) {
+      console.error("Errore OAuth:", err);
+      return res.status(500).send("Errore OAuth interno");
+    }
+    if (!user) return res.redirect("/");
 
-// UTENTE
+    req.logIn(user, err => {
+      if (err) {
+        console.error("Errore login session:", err);
+        return res.status(500).send("Errore login sessione");
+      }
+      // reindirizza al frontend
+      return res.redirect("https://concessionario-fivem.vercel.app/dashboard");
+    });
+  })(req, res, next);
+});
+
+// INFO UTENTE
 app.get("/api/user", (req, res) => {
   res.json(req.user || null);
 });
 
-// API AUTO
+// LISTA AUTO
 app.get("/api/cars", (req, res) => {
   db.all("SELECT * FROM cars", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -93,7 +106,7 @@ app.get("/api/cars", (req, res) => {
 
 // CREA AUTO
 app.post("/api/cars", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Not authenticated" });
+  if (!req.user) return res.status(401).json({ error: "Non autenticato" });
 
   const { tipo, persona, tipo_macchina, costo, targa } = req.body;
   db.run(
@@ -108,7 +121,7 @@ app.post("/api/cars", (req, res) => {
 
 // ELIMINA AUTO
 app.delete("/api/cars/:id", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Not authenticated" });
+  if (!req.user) return res.status(401).json({ error: "Non autenticato" });
 
   db.run("DELETE FROM cars WHERE id = ?", [req.params.id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -116,5 +129,6 @@ app.delete("/api/cars/:id", (req, res) => {
   });
 });
 
+// AVVIO SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server online su port ${PORT}`));
