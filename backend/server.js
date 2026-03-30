@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS cars (
 // CONFIG DISCORD OAuth2
 const config = {
   clientID: "1488241628576485466", // tuo Client ID
-  clientSecret: "Qvk0hAwEn9LfZWSdqwF9CSVGlh0zgB-L", // tuo Client Secret
+  clientSecret: "3KrH4qLkrZy_HdwuE0IvN3Gzp_KZvJmr", // tuo Client Secret
   callbackURL: "https://concessionario-fivem.onrender.com/auth/discord/callback"
 };
 
