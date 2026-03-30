@@ -24,7 +24,7 @@ export default function App() {
   if (!user) {
     return (
       <div style={{color:"white", background:"#111", height:"100vh", display:"flex", justifyContent:"center", alignItems:"center"}}>
-        <a href="https://concessionario-fivem.onrender.com/auth/discord/callback">
+        <a href="https://concessionario-fivem.onrender.com/auth/discord">
           Login con Discord
         </a>
       </div>
