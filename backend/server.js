@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
@@ -7,23 +6,23 @@ const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 
 const app = express();
-app.set("trust proxy", 1); // fondamentale dietro Render
+app.set("trust proxy", 1); // necessario dietro Render
 
-// CORS per frontend
+// --- CORS verso frontend Vercel ---
 app.use(cors({
-  origin: "https://concessionario-fivem.vercel.app", 
+  origin: "https://concessionario-fivem.vercel.app",
   credentials: true
 }));
 
 app.use(express.json());
 
-// SESSIONE sicura
+// --- SESSIONE sicura ---
 app.use(session({
   secret: "supersecret",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true,    // HTTPS obbligatorio
+    secure: true,    // HTTPS
     sameSite: "none"
   }
 }));
@@ -31,7 +30,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// DATABASE SQLite
+// --- DATABASE SQLite ---
 const db = new sqlite3.Database("./database.db");
 db.run(`
 CREATE TABLE IF NOT EXISTS cars (
@@ -42,13 +41,19 @@ CREATE TABLE IF NOT EXISTS cars (
   costo INTEGER,
   targa TEXT,
   inserito_da TEXT
-)
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  discord_id TEXT PRIMARY KEY,
+  username TEXT,
+  role TEXT
+);
 `);
 
-// CONFIG DISCORD OAuth2
+// --- CONFIG DISCORD ---
 const config = {
-  clientID: "1488241628576485466", // tuo Client ID
-  clientSecret: "3KrH4qLkrZy_HdwuE0IvN3Gzp_KZvJmr", // tuo Client Secret
+  clientID: "1488241628576485466",  // tuo client ID
+  clientSecret: "3KrH4qLkrZy_HdwuE0IvN3Gzp_KZvJmr", // tuo client secret
   callbackURL: "https://concessionario-fivem.onrender.com/auth/discord/callback"
 };
 
@@ -58,7 +63,12 @@ passport.use(new DiscordStrategy({
   callbackURL: config.callbackURL,
   scope: ["identify"]
 }, (accessToken, refreshToken, profile, done) => {
-  console.log("Login Discord effettuato:", profile.username);
+  // Inserisce o aggiorna utente nel db
+  db.run(
+    "INSERT OR REPLACE INTO users (discord_id, username, role) VALUES (?, ?, COALESCE((SELECT role FROM users WHERE discord_id=?), 'Membro'))",
+    [profile.id, profile.username, profile.id],
+    err => { if(err) console.error(err); }
+  );
   return done(null, profile);
 }));
 
@@ -66,70 +76,76 @@ passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
 // --- ROUTE ---
-app.get("/", (req, res) => res.send("Backend attivo ✅"));
 
-// LOGIN Discord
+app.get("/", (req, res) => res.send("Backend PRO attivo ✅"));
+
+// --- LOGIN Discord ---
 app.get("/auth/discord", passport.authenticate("discord"));
 
-// CALLBACK con debug dettagliato
 app.get("/auth/discord/callback", (req, res, next) => {
   passport.authenticate("discord", (err, user, info) => {
     if (err) {
-      console.error("Errore OAuth:", err);
-      return res.status(500).send(`Errore OAuth interno: ${err.message}`);
+      console.error("Errore OAuth reale:", err);
+      return res.status(500).send(`Errore OAuth reale: ${err.message}`);
     }
     if (!user) {
       console.log("Nessun user ottenuto:", info);
       return res.redirect("/");
     }
-
     req.logIn(user, err => {
       if (err) {
         console.error("Errore login session:", err);
-        return res.status(500).send(`Errore sessione: ${err.message}`);
+        return res.status(500).send(`Errore sessione reale: ${err.message}`);
       }
-      // Redirect al frontend dashboard
       return res.redirect("https://concessionario-fivem.vercel.app/dashboard");
     });
   })(req, res, next);
 });
 
-// API UTENTE
+// --- API UTENTE ---
 app.get("/api/user", (req, res) => {
-  res.json(req.user || null);
+  if(!req.user) return res.json(null);
+  db.get("SELECT role FROM users WHERE discord_id=?", [req.user.id], (err, row) => {
+    if(err) return res.status(500).json({error: err.message});
+    res.json({username: req.user.username, id: req.user.id, role: row.role});
+  });
 });
 
-// API AUTO
+// --- API AUTO ---
 app.get("/api/cars", (req, res) => {
   db.all("SELECT * FROM cars", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if(err) return res.status(500).json({error: err.message});
     res.json(rows);
   });
 });
 
 app.post("/api/cars", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Non autenticato" });
-
+  if(!req.user) return res.status(401).json({error:"Non autenticato"});
   const { tipo, persona, tipo_macchina, costo, targa } = req.body;
   db.run(
     "INSERT INTO cars (tipo, persona, tipo_macchina, costo, targa, inserito_da) VALUES (?, ?, ?, ?, ?, ?)",
     [tipo, persona, tipo_macchina, costo, targa, req.user.username],
-    function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID });
-    }
+    function(err) { if(err) return res.status(500).json({error:err.message}); res.json({id:this.lastID}); }
   );
 });
 
-app.delete("/api/cars/:id", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Non autenticato" });
-
-  db.run("DELETE FROM cars WHERE id = ?", [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.sendStatus(200);
+app.delete("/api/cars/:id", (req,res) => {
+  if(!req.user) return res.status(401).json({error:"Non autenticato"});
+  db.get("SELECT inserito_da FROM cars WHERE id=?", [req.params.id], (err,row)=>{
+    if(err) return res.status(500).json({error:err.message});
+    // Solo Admin o chi ha inserito può eliminare
+    db.get("SELECT role FROM users WHERE discord_id=?", [req.user.id], (err2,userRow)=>{
+      if(err2) return res.status(500).json({error:err2.message});
+      if(userRow.role !== "Admin" && row.inserito_da !== req.user.username)
+        return res.status(403).json({error:"Non autorizzato"});
+      db.run("DELETE FROM cars WHERE id=?", [req.params.id], err3=>{
+        if(err3) return res.status(500).json({error:err3.message});
+        res.sendStatus(200);
+      });
+    });
   });
 });
 
-// AVVIO SERVER
+// --- PORT ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server online su port ${PORT}`));
+app.listen(PORT,()=>console.log(`Server PRO online su port ${PORT}`));
