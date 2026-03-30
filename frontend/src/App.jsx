@@ -11,6 +11,7 @@ export default function App() {
     targa: "",
   });
 
+  // Carica dati
   useEffect(() => {
     fetch("https://concessionario-fivem.onrender.com/api/user", { credentials: "include" })
       .then(res => res.json())
