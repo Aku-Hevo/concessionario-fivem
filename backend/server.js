@@ -7,11 +7,11 @@ const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 
 const app = express();
-app.set("trust proxy", 1); // importante dietro proxy Render
+app.set("trust proxy", 1); // fondamentale dietro Render
 
 // CORS per frontend
 app.use(cors({
-  origin: "https://concessionario-fivem.vercel.app",
+  origin: "https://concessionario-fivem.vercel.app", 
   credentials: true
 }));
 
@@ -23,7 +23,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // HTTPS obbligatorio
+    secure: true,    // HTTPS obbligatorio
     sameSite: "none"
   }
 }));
@@ -45,10 +45,10 @@ CREATE TABLE IF NOT EXISTS cars (
 )
 `);
 
-// --- DISCORD OAUTH2 hardcoded ---
+// CONFIG DISCORD OAuth2
 const config = {
-  clientID: "1488241628576485466", // il tuo Client ID
-  clientSecret: "Qvk0hAwEn9LfZWSdqwF9CSVGlh0zgB-L", // il tuo Client Secret
+  clientID: "1488241628576485466", // tuo Client ID
+  clientSecret: "Qvk0hAwEn9LfZWSdqwF9CSVGlh0zgB-L", // tuo Client Secret
   callbackURL: "https://concessionario-fivem.onrender.com/auth/discord/callback"
 };
 
@@ -58,7 +58,7 @@ passport.use(new DiscordStrategy({
   callbackURL: config.callbackURL,
   scope: ["identify"]
 }, (accessToken, refreshToken, profile, done) => {
-  console.log("Discord profile:", profile.username);
+  console.log("Login Discord effettuato:", profile.username);
   return done(null, profile);
 }));
 
@@ -71,32 +71,35 @@ app.get("/", (req, res) => res.send("Backend attivo ✅"));
 // LOGIN Discord
 app.get("/auth/discord", passport.authenticate("discord"));
 
-// CALLBACK con gestione errori dettagliata
+// CALLBACK con debug dettagliato
 app.get("/auth/discord/callback", (req, res, next) => {
   passport.authenticate("discord", (err, user, info) => {
     if (err) {
       console.error("Errore OAuth:", err);
-      return res.status(500).send("Errore OAuth interno");
+      return res.status(500).send(`Errore OAuth interno: ${err.message}`);
     }
-    if (!user) return res.redirect("/");
+    if (!user) {
+      console.log("Nessun user ottenuto:", info);
+      return res.redirect("/");
+    }
 
     req.logIn(user, err => {
       if (err) {
         console.error("Errore login session:", err);
-        return res.status(500).send("Errore login sessione");
+        return res.status(500).send(`Errore sessione: ${err.message}`);
       }
-      // reindirizza al frontend
+      // Redirect al frontend dashboard
       return res.redirect("https://concessionario-fivem.vercel.app/dashboard");
     });
   })(req, res, next);
 });
 
-// INFO UTENTE
+// API UTENTE
 app.get("/api/user", (req, res) => {
   res.json(req.user || null);
 });
 
-// LISTA AUTO
+// API AUTO
 app.get("/api/cars", (req, res) => {
   db.all("SELECT * FROM cars", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -104,7 +107,6 @@ app.get("/api/cars", (req, res) => {
   });
 });
 
-// CREA AUTO
 app.post("/api/cars", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Non autenticato" });
 
@@ -119,7 +121,6 @@ app.post("/api/cars", (req, res) => {
   );
 });
 
-// ELIMINA AUTO
 app.delete("/api/cars/:id", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Non autenticato" });
 
